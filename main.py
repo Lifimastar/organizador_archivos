@@ -1,53 +1,76 @@
 import os
 import shutil
 
-# --- Configuracion ---
-FILE_TYPES = {
-    "Imagenes": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
-    "Documentos": [".pdf", ".doc", ".docx", ".txt", ".rtf", ".odt", ".ppt", ".pptx", ".xls", ".xlsx"],
-    "Videos": [".mp4", ".mov", ".avi", ".mkv", ".flv", ".wmv"],
-    "Audios": [".mp3", ".wav", ".aac", ".flac"],
-    "Comprimidos": [".zip", ".rar", ".7z", ".tar", ".gz"],
-    "Ejecutables": [".exe", ".msi", ".dmg"],
-    "Programacion": [".py", ".js", ".html", ".css", ".java", ".c", ".cpp", ".php", ".json", ".xml"],
-    "Otros": [] # Para archivos que no encajan en ninguna categoría
-}
-
-def get_file_type_category(file_extension):
+class FileOrganizer:
     """
-    Determina la categoria de un archivo basandose en su extension.
+    Clase para organizar archivos en una carpeta especifica por tipo.
     """
-    for category, extensions in FILE_TYPES.items():
-        if file_extension.lower() in extensions:
-            return category
-    return "Otros"
-
-def organize_folder(source_folder):
-    """
-    Organiza los archivos en la carpeta especifica.
-    """
-    if not os.path.isdir(source_folder):
-        print(f"Error: La ruta '{source_folder}' no es una carpeta valida.")
-        return
+    def __init__(self, source_folder):
+        """
+        Inicializa el organizador con la carpeta fuente.
+        """
+        self.source_folder = source_folder
+        self.file_types = {
+            "Imagenes": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+            "Documentos": [".pdf", ".doc", ".docx", ".txt", ".rtf", ".odt", ".ppt", ".pptx", ".xls", ".xlsx"],
+            "Videos": [".mp4", ".mov", ".avi", ".mkv", ".flv", ".wmv"],
+            "Audios": [".mp3", ".wav", ".aac", ".flac"],
+            "Comprimidos": [".zip", ".rar", ".7z", ".tar", ".gz"],
+            "Ejecutables": [".exe", ".msi", ".dmg"],
+            "Programacion": [".py", ".js", ".html", ".css", ".java", ".c", ".cpp", ".php", ".json", ".xml"],
+            "Otros": []
+        }
+        self.files_moved = 0
+        self.files_skipped = 0
     
-    print(f"Iniciando organizacion en: {source_folder}")
+    def _get_file_type_category(self, file_extension):
+        """
+        Metodo interno para determinar la categoria de un archivo.
+        """
+        for category, extensions in self.file_types.items():
+            if file_extension.lower() in extensions:
+                return category
+        return "Otros"
+    
+    def organize(self):
+        """
+        Ejecuta el proceso de organizacion de archivos.
+        """
+        if not os.path.isdir(self.source_folder):
+            print(f"Error: La ruta '{self.source_folder}' no es una carpeta valida o no existe.")
+            return False
+        
+        print(f"\n--- Iniciando organizacion en: {self.source_folder} ---")
 
-    # Itera sobre todos los elementos en la carpeta
-    for filename in os.listdir(source_folder):
-        file_path = os.path.join(source_folder, filename)
+        for filename in os.listdir(self.source_folder):
+            file_path = os.path.join(self.source_folder, filename)
 
-        # Ignorar directorios, solo procesar archivos
-        if os.path.isfile(file_path):
-            file_name, file_extension = os.path.splitext(filename)
-            category = get_file_type_category(file_extension)
+            if os.path.isfile(file_path) and filename != os.path.basename(__file__):
+                file_name, file_extension = os.path.splitext(filename)
+                category = self._get_file_type_category(file_extension)
 
-            print(f"Archivo: {filename} -> Categoria: {category} (Extension: {file_extension})")
+                destination_folder = os.path.join(self.source_folder, category)
 
-            # --- Logica para crear carpetas y mover archivos ---
+                try:
+                    os.makedirs(destination_folder, exist_ok=True)
+                    shutil.move(file_path, destination_folder)
+                    print(f"Movido: '{filename}' a '{category}/'")
+                    self.files_moved += 1
+                except Exception as e:
+                    print(f'Error al mover "{filename}": {e}')
+                    self.files_skipped += 1
+            elif os.path.isdir(file_path):
+                print(f'Saltando directorio: "{filename}"')
+            else:
+                print(f'Saltando elemento no archivado: "{filename}"')
 
-            print("Proceso de categorizacion inicial completado.")
+                print(f"\n--- Proceso de categorizacion inicial completado ---")
+                print(f'Archivos movidos: {self.files_moved}')
+                print(f'Archivos omitidos (errores o directorios): {self.files_skipped}')
+                return True
+
 
 if __name__ == "__main__":
-    # Pide al usuario la ruta de la carpeta a organizar
     folder_to_organize = input("Introduce la ruta completa de la carpeta a organizar: ")
-    organize_folder(folder_to_organize)
+    organizer = FileOrganizer(folder_to_organize)
+    organizer.organize()
