@@ -51,12 +51,14 @@ class FileOrganizer:
             file_path = os.path.join(self.source_folder, filename)
 
             if os.path.isfile(file_path) and filename != os.path.basename(__file__):
-                file_name, file_extension = os.path.splitext(filename)
+                file_name_without_ext, file_extension = os.path.splitext(filename)
                 category = self._get_file_type_category(file_extension)
 
                 destination_folder = os.path.join(self.source_folder, category)
+                destination_file_path = os.path.join(destination_folder, filename)
 
                 try:
+                    # Crear la carpeta de destino si no existe
                     if not os.path.exists(destination_folder) and not self.dry_run:
                         os.makedirs(destination_folder, exist_ok=True)
                         self.folders_created += 1
@@ -64,12 +66,27 @@ class FileOrganizer:
                     elif os.path.exists(destination_folder):
                         print(f"Carpeta existente: '{category}/")
 
+                    # Manejo de archivos duplicados
+                    if os.path.exists(destination_file_path):
+                        counter = 1
+                        new_filename = f"{file_name_without_ext}_copia{counter}{file_extension}"
+                        temp_destination_file_path = os.path.join(destination_folder, new_filename)
+                        while os.path.exists(temp_destination_file_path):
+                            counter += 1
+                            new_filename = f"{file_name_without_ext}_copia{counter}{file_extension}"
+                            temp_destination_file_path = os.path.join(destination_folder, new_filename)
+                        
+                        print(f"Advertencia: '{filename}' ya existe en  '{category}/'. Renombrando a '{new_filename}'")
+                        filename = new_filename
+                        destination_file_path = temp_destination_file_path
+
+                    # Mover el archivo (o simular)
                     if not self.dry_run:    
-                        shutil.move(file_path, destination_folder)
-                        print(f"Movido: '{filename}' a '{category}/'")
+                        shutil.move(file_path, destination_file_path)
+                        print(f"Movido: '{os.path.basename(file_path)}' a '{category}/{os.path.basename(destination_file_path)}'")
                         self.files_moved += 1
                     else:
-                        print(f"Simulando movimiento: '{filename}' a '{category}/'")
+                        print(f"Simulando movimiento: '{os.path.basename(file_path)}' a '{category}/{os.path.basename(destination_file_path)}'")
                         self.files_moved += 1
                 except Exception as e:
                     print(f'Error al mover "{filename}": {e}')
